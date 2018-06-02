@@ -98,7 +98,9 @@ def evaluation(raw_df, Rating_matrix, shape):
 
 def read_rating_data(file):
     # read data from file
-    raw_df = pd.read_csv(file)
+    Ratings_Names = ['User_ID', 'Movie_ID', 'Rating', 'Time_Stamp']
+    raw_df = pd.read_csv(file, skiprows=1, sep='\t', names=Ratings_Names)
+#    raw_df = pd.read_csv(file)
     columns = raw_df.columns
     #number of users and movies
     shape = (max(raw_df[columns[0]]), max(raw_df[columns[1]]))
@@ -123,10 +125,10 @@ def read_info_data(file):
     raw_df = pd.read_csv(file)
     columns = raw_df.columns
 
-rating_df, rating_matrix, shape = read_rating_data('ml-latest-small/ratings.csv')
+rating_df, rating_matrix, shape = read_rating_data('ml-100k/u.data')
 evaluation(rating_df, rating_matrix, shape)
 movie_ids = recommend_movies(5, 50, 1, rating_matrix)
-read_movie_data('ml-latest-small/movies.csv', movie_ids)
+#read_movie_data('movies.csv', movie_ids)
 
 
 
