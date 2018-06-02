@@ -61,14 +61,12 @@ def predict_based_on_users (k, user_sim_matrix, train_data, test_data):
     print('The mean squared error of {} user_based CF is: {}\n'.format(k, mse))
     return mse
 
-def evaluation(raw_df, Rating_matrix, shape):
+def evaluation(Rating_matrix, shape, matrix_sparsity):
     #number of data lines
-    num_lines = len(raw_df)
     #built Rating_matrix by raw_df
-    for line in raw_df.itertuples():
-        Rating_matrix[line[1] - 1][line[2] - 1] = line[3]
+
     #sparsity of the matrix
-    matrix_sparsity = num_lines / (shape[0] * shape[1])
+
     
     num_ratings = int(0.1 * matrix_sparsity * shape[1])
     print('select {} ratings from each user'.format(num_ratings))
@@ -98,39 +96,85 @@ def evaluation(raw_df, Rating_matrix, shape):
 
 def read_rating_data(file):
     # read data from file
-    Ratings_Names = ['User_ID', 'Movie_ID', 'Rating', 'Time_Stamp']
-    raw_df = pd.read_csv(file, skiprows=1, sep='\t', names=Ratings_Names)
-#    raw_df = pd.read_csv(file)
-    columns = raw_df.columns
-    #number of users and movies
-    shape = (max(raw_df[columns[0]]), max(raw_df[columns[1]]))
-    #empty Rating_matrix
-    rating_matrix = np.zeros(shape)
-    return raw_df, rating_matrix, shape
+#    Ratings_Names = ['User_ID', 'Movie_ID', 'Rating', 'Time_Stamp']
+#    raw_df = pd.read_csv(file, sep='\t', names=Ratings_Names)
+##    raw_df = pd.read_csv(file)
+#    columns = raw_df.columns
+#    #number of users and movies
+#    shape = (max(raw_df[columns[0]]), max(raw_df[columns[1]]))
+#    #empty Rating_matrix
+#    rating_matrix = np.zeros(shape)
+    
+#    Ratings_Names = ['User_ID', 'Movie_ID', 'Rating', 'Time_Stamp']
+#    ratings = pd.read_csv(file, sep='\t', names=Ratings_Names)
+    ratings = pd.read_csv(file)
+
+    user_set = set()
+    movie_set = set()
+    for entry in ratings.itertuples(index=False):
+        user_id = entry[0]
+        movie_id = entry[1]
+        user_set.add(user_id)
+        movie_set.add(movie_id)
+    user_num = len(user_set)
+    item_num = len(movie_set)
+
+    user_list = sorted(user_set)
+    movie_list = sorted(movie_set)
+
+    user_id_index_map = {}
+    movie_id_index_map = {}
+    for i in range(user_num):
+        user_id_index_map[user_list[i]] = i
+    for i in range(item_num):
+        movie_id_index_map[movie_list[i]] = i
+
+    # create rating matrix
+    rating_matrix = np.zeros((user_num, item_num))
+    rating_matrix_sparsity = len(ratings) / (user_num * item_num)
+
+    for entry in ratings.itertuples(index=False):
+        user_id = entry[0]
+        movie_id = entry[1]
+        index = user_id_index_map[user_id]
+        column = movie_id_index_map[movie_id]
+        rating_matrix[index, column] = entry[2]
+    
+    return rating_matrix, rating_matrix.shape, rating_matrix_sparsity, movie_list
 
 def read_user_data(file):
     # read data from file
     raw_df = pd.read_csv(file)
     columns = raw_df.columns
     
-def read_movie_data(file, movie_ids):
+def read_movie_data(file, movie_ids, movie_list):
     # read data from file
+    
     raw_df = pd.read_csv(file)
+#    print(raw_df.head())
     columns = raw_df.columns
-    print(raw_df.loc[raw_df[columns[0]].isin(movie_ids)][columns[1]])
-    return raw_df.loc[raw_df[columns[0]].isin(movie_ids)][columns[1]]
+    result = []
+    for i in movie_ids:
+        result.append(movie_list[i])
+    print(raw_df.loc[raw_df[columns[0]].isin(result)][columns[1]])
+    return raw_df.loc[raw_df[columns[0]].isin(result)][columns[1]]
     
 def read_info_data(file):
     # read data from file
     raw_df = pd.read_csv(file)
     columns = raw_df.columns
 
-rating_df, rating_matrix, shape = read_rating_data('ml-100k/u.data')
-evaluation(rating_df, rating_matrix, shape)
+#rating_df, rating_matrix, shape = read_rating_data('ml-100k/u.data')
+rating_matrix, shape, rating_matrix_sparsity, movie_list = read_rating_data('ml-latest-small/ratings.csv')
+#evaluation(rating_matrix, shape, rating_matrix_sparsity)
 movie_ids = recommend_movies(5, 50, 1, rating_matrix)
-#read_movie_data('movies.csv', movie_ids)
+print(movie_ids)
+read_movie_data('ml-latest-small/movies.csv', movie_ids, movie_list)
 
 
+
+
+    
 
 
 
