@@ -1,7 +1,7 @@
 import sys
 import pandas
 import numpy
-import matplotlib.pyplot
+import matplotlib.pyplot as pyplot
 
 DEBUG = False
 
