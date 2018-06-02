@@ -141,7 +141,7 @@ if __name__ == '__main__':
 
     # 1.1 Get user-movie ratings from MovieLens('ratings.csv')
     Ratings_Names = ['User_ID', 'Movie_ID', 'Rating', 'Time_Stamp']
-    df = pd.read_csv('u.data', skiprows=1, sep='\t', names=Ratings_Names)
+    df = pd.read_csv('ml-100k/u.data', skiprows=1, sep='\t', names=Ratings_Names)
 
     #print(df.head())
 
