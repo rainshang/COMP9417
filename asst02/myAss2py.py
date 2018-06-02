@@ -1,114 +1,62 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Thu May 31 16:35:57 2018
+import sys
+import pandas
+import numpy
+import matplotlib.pyplot
 
-@author: 40227
-"""
+DEBUG = False
 
-import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt; plt.rcdefaults()
-import matplotlib.pyplot as plt
+global user_list
+global user_id_index_map
+global movie_list
+global rating_matrix
+global rating_sim_matrix
 
-def MSE(pred, true):
-    return np.average((pred - true) ** 2)
 
-def cos_similarity(Rating_matrix):
-    similarity = np.dot(Rating_matrix, Rating_matrix.T) + 1e-9
-    norms = np.array([np.sqrt(np.diagonal(similarity))])
-    return (similarity / (norms * norms.T))
-
-def recommend_movies(n, k, uid, rating_matrix):
-    #actual index of user is uid - 1
-    user_index = uid - 1
-    #user cos similarity matrix:
-    user_sim_matrix = cos_similarity(rating_matrix)
-    #indexes of (num_other_user) most similar users 
-    index_most_similar_users = [np.argsort(user_sim_matrix[:,user_index])[-2:-k-2:-1]]
-    
-    num_of_movies = rating_matrix.shape[1]
-    #empty prediction matrix:   
-    pred_matrix = np.zeros(num_of_movies)
-    for movie in range(num_of_movies):
-        if rating_matrix[user_index][movie] == 0:
-            denominator = np.sum(user_sim_matrix[user_index][index_most_similar_users])
-            numerator = user_sim_matrix[user_index][index_most_similar_users].dot(rating_matrix[:,movie][index_most_similar_users])
-            pred_matrix[movie] = numerator / denominator
-    #unrated movies of this user but hightly rated by most similar users
-    #actual movie id = movie index + 1
-    movie_ids = [i + 1 for i in np.argsort(pred_matrix)[-n:]]
-    return movie_ids
-
-def predict_based_on_users (k, user_sim_matrix, train_data, test_data):
-    if k == 'ALL':
-        prediction_matrix = user_sim_matrix.dot(train_data) / np.array([np.abs(user_sim_matrix).sum(axis=1)]).T
+def main():
+    if len(sys.argv) == 1:
+        rating_data_path = 'ml-latest-small/ratings.csv'
+        movie_data_path = 'ml-latest-small/movies.csv'
     else:
-        num_of_users = train_data.shape[0]
-        num_of_movies = train_data.shape[1]
-        #empty prediction matrix:   
-        prediction_matrix = np.zeros((num_of_users, num_of_movies))
-        for user in range(num_of_users):
-            #indexes of k most similar users  
-            index_k_most_similar_users = [np.argsort(user_sim_matrix[:,user])[-2:-k-2:-1]]
-            for movie in range(num_of_movies):
-                denominator = np.sum(user_sim_matrix[user][index_k_most_similar_users])
-                numerator = user_sim_matrix[user][index_k_most_similar_users].dot(train_data[:,movie][index_k_most_similar_users])
-                prediction_matrix[user][movie] = numerator / denominator
-    #index of non-zero values of test_data
-    non_zero_index = test_data.nonzero()
-    #mse of test data and predict data
-    mse = MSE(prediction_matrix[non_zero_index].flatten(), test_data[non_zero_index].flatten())
-    print('The mean squared error of {} user_based CF is: {}\n'.format(k, mse))
-    return mse
+        rating_data_path = sys.argv[1]
+        movie_data_path = sys.argv[2]
 
-def evaluation(Rating_matrix, shape, matrix_sparsity):
-    #number of data lines
-    #built Rating_matrix by raw_df
+    ratings = parse_data(rating_data_path)
+    rating_matrix_sparsity = generate_rating_matrix(ratings)
+    # evaluation(rating_matrix_sparsity)
 
-    #sparsity of the matrix
+    global rating_sim_matrix
+    rating_sim_matrix = cos_similarity(rating_matrix)
+    movies = parse_data(movie_data_path)
 
-    
-    num_ratings = int(0.1 * matrix_sparsity * shape[1])
-    print('select {} ratings from each user'.format(num_ratings))
-    
-    train_data = Rating_matrix.copy()
-    test_data = np.zeros(shape)
-    #actual user id = user_index + 1
-    for user_index in range(shape[0]):
-        #randomly select (num_ratings) different rated movies from each user
-        movie_index = np.random.choice(Rating_matrix[user_index].nonzero()[0], size = num_ratings, replace = False)
-        #take ratings of these movies into test_data
-        test_data[user_index, movie_index] = Rating_matrix[user_index, movie_index]
-        #set same position of train_data to 0
-        train_data[user_index, movie_index] = 0.
+    while True:
+        uid = input(
+            'Please input the user ID, we\'ll recommend some movies this user may like:')
+        movie_ids = recommend_movies(5, 50, int(uid))
+        if DEBUG:
+            print('Recommendation are:{}'.format(movie_ids))
 
-    user_sim_matrix = cos_similarity(train_data)
-    performance = []
-    ks = [5, 10, 50, 100, 200, 'ALL']
-    for k in ks:
-        performance.append(predict_based_on_users (k, user_sim_matrix, train_data, test_data))
-    y_pos = np.arange(len(ks)) 
-    plt.bar(y_pos, performance, align='center', alpha=0.5)
-    plt.xticks(y_pos, ks)
-    plt.ylabel('MSE')
-    plt.title('MSE of different k values')
-    plt.show()
+        columns = movies.columns
+        result = []
+        for i in movie_ids:
+            result.append(movie_list[i])
+        print(movies.loc[movies[columns[0]].isin(result)][columns[1]])
 
-def read_rating_data(file):
-    # read data from file
-#    Ratings_Names = ['User_ID', 'Movie_ID', 'Rating', 'Time_Stamp']
-#    raw_df = pd.read_csv(file, sep='\t', names=Ratings_Names)
-##    raw_df = pd.read_csv(file)
-#    columns = raw_df.columns
-#    #number of users and movies
-#    shape = (max(raw_df[columns[0]]), max(raw_df[columns[1]]))
-#    #empty Rating_matrix
-#    rating_matrix = np.zeros(shape)
-    
-#    Ratings_Names = ['User_ID', 'Movie_ID', 'Rating', 'Time_Stamp']
-#    ratings = pd.read_csv(file, sep='\t', names=Ratings_Names)
-    ratings = pd.read_csv(file)
 
+def parse_data(path):
+    if path.endswith('.csv'):
+        return pandas.read_csv(path)
+    # elif path.endswith('.data'):
+    #     return pandas.read_csv(path, sep='\t')
+    else:
+        raise TypeError('We don\'t support other data format!')
+
+
+def generate_rating_matrix(ratings):
+    global user_list
+    global user_id_index_map
+    global movie_list
+    global rating_matrix
+    # get all users and movies in rating data
     user_set = set()
     movie_set = set()
     for entry in ratings.itertuples(index=False):
@@ -118,80 +66,143 @@ def read_rating_data(file):
         movie_set.add(movie_id)
     user_num = len(user_set)
     item_num = len(movie_set)
+    if DEBUG:
+        print('{} users involved: {}'.format(user_num, user_set))
+        print('{} movies involved: {}'.format(item_num, movie_set))
 
+    # sort the id, this step is not necessary
     user_list = sorted(user_set)
     movie_list = sorted(movie_set)
+    if DEBUG:
+        print('Sort users by id: {}'.format(user_list))
+        print('Sort movies by id: {}'.format(movie_list))
 
+    # create a hash map for searching the position in user_list(movie_list) of one user_id(movie_id)
     user_id_index_map = {}
     movie_id_index_map = {}
     for i in range(user_num):
         user_id_index_map[user_list[i]] = i
     for i in range(item_num):
         movie_id_index_map[movie_list[i]] = i
+    if DEBUG:
+        print('id-index map of users: {}'.format(user_id_index_map))
+        print('id-index map of movies: {}'.format(movie_id_index_map))
 
     # create rating matrix
-    rating_matrix = np.zeros((user_num, item_num))
+    rating_matrix = numpy.zeros((user_num, item_num))
     rating_matrix_sparsity = len(ratings) / (user_num * item_num)
-
+    if DEBUG:
+        print('Sparsity of rating matrix is: {}'.format(rating_matrix_sparsity))
     for entry in ratings.itertuples(index=False):
         user_id = entry[0]
         movie_id = entry[1]
         index = user_id_index_map[user_id]
         column = movie_id_index_map[movie_id]
         rating_matrix[index, column] = entry[2]
-    
-    return rating_matrix, rating_matrix.shape, rating_matrix_sparsity, movie_list
 
-def read_user_data(file):
-    # read data from file
-    raw_df = pd.read_csv(file)
-    columns = raw_df.columns
-    
-def read_movie_data(file, movie_ids, movie_list):
-    # read data from file
-    
-    raw_df = pd.read_csv(file)
-#    print(raw_df.head())
-    columns = raw_df.columns
-    result = []
-    for i in movie_ids:
-        result.append(movie_list[i])
-    print(raw_df.loc[raw_df[columns[0]].isin(result)][columns[1]])
-    return raw_df.loc[raw_df[columns[0]].isin(result)][columns[1]]
-    
-def read_info_data(file):
-    # read data from file
-    raw_df = pd.read_csv(file)
-    columns = raw_df.columns
-
-#rating_df, rating_matrix, shape = read_rating_data('ml-100k/u.data')
-rating_matrix, shape, rating_matrix_sparsity, movie_list = read_rating_data('ml-latest-small/ratings.csv')
-#evaluation(rating_matrix, shape, rating_matrix_sparsity)
-movie_ids = recommend_movies(5, 50, 1, rating_matrix)
-print(movie_ids)
-read_movie_data('ml-latest-small/movies.csv', movie_ids, movie_list)
+    return rating_matrix_sparsity
 
 
+def evaluation(rating_matrix_sparsity):
+    # we select 10% of sparsity * item as testing data set for each user
+    num_test_items_per_user = int(
+        0.1 * rating_matrix_sparsity * rating_matrix.shape[1])
+    if DEBUG:
+        print('Select {} movies for testing per user'.format(
+            num_test_items_per_user))
+
+    train_data = rating_matrix.copy()
+    test_data = numpy.zeros(rating_matrix.shape)
+    for user_index in range(rating_matrix.shape[0]):
+        # randomly select (num_test_items_per_user) different rated movies from each user
+        movie_index = numpy.random.choice(rating_matrix[user_index].nonzero()[
+            0], size=num_test_items_per_user, replace=False)
+        test_data[user_index, movie_index] = rating_matrix[user_index, movie_index]
+        train_data[user_index, movie_index] = 0.
+    if DEBUG:
+        print('Training data set is:{}'.format(train_data))
+        print('Testing data set is:{}'.format(test_data))
+
+    # calculate cosine-similarity
+    train_sim_matrix = cos_similarity(train_data)
+
+    # predict based on Top-k based CF and normal CF
+    performance = []
+    ks = [5, 10, 50, 100, 200, 'ALL']
+    for k in ks:
+        performance.append(predict_based_on_users(
+            k, train_sim_matrix, train_data, test_data))
+
+    # visualization
+    y_pos = numpy.arange(len(ks))
+    pyplot.bar(y_pos, performance, align='center', alpha=0.5)
+    pyplot.xticks(y_pos, ks)
+    pyplot.ylabel('MSE')
+    pyplot.title('MSE of different k values')
+    pyplot.show()
 
 
-    
+def cos_similarity(matrix):
+    similarity = numpy.dot(matrix, matrix.T) + 1e-9
+    norms = numpy.array([numpy.sqrt(numpy.diagonal(similarity))])
+    return (similarity / (norms * norms.T))
 
 
+def predict_based_on_users(k, user_sim_matrix, train_data, test_data):
+    if k == 'ALL':
+        prediction_matrix = user_sim_matrix.dot(
+            train_data) / numpy.array([numpy.abs(user_sim_matrix).sum(axis=1)]).T
+    else:
+        num_of_users = train_data.shape[0]
+        num_of_movies = train_data.shape[1]
+        # empty prediction matrix:
+        prediction_matrix = numpy.zeros((num_of_users, num_of_movies))
+        for user in range(num_of_users):
+            # indexes of k most similar users
+            index_k_most_similar_users = [numpy.argsort(
+                user_sim_matrix[:, user])[-2:-k-2:-1]]
+            for movie in range(num_of_movies):
+                denominator = numpy.sum(
+                    user_sim_matrix[user][index_k_most_similar_users])
+                numerator = user_sim_matrix[user][index_k_most_similar_users].dot(
+                    train_data[:, movie][index_k_most_similar_users])
+                prediction_matrix[user][movie] = numerator / denominator
+    # index of non-zero values of test_data
+    non_zero_index = test_data.nonzero()
+    # mse of test data and predict data
+    mse = MSE(prediction_matrix[non_zero_index].flatten(
+    ), test_data[non_zero_index].flatten())
+    if DEBUG:
+        print('The mean squared error of {} user_based CF is: {}\n'.format(k, mse))
+    return mse
 
 
+def MSE(pred, true):
+    return numpy.average((pred - true) ** 2)
 
 
+def recommend_movies(n, k, uid):
+    user_index = user_id_index_map[uid]
+    # indexes of (num_other_user) most similar users
+    index_most_similar_users = [numpy.argsort(
+        rating_sim_matrix[:, user_index])[-2:-k-2:-1]]
+
+    num_of_movies = rating_matrix.shape[1]
+    # empty prediction matrix:
+    pred_matrix = numpy.zeros(num_of_movies)
+    for movie in range(num_of_movies):
+        if rating_matrix[user_index][movie] == 0:
+            denominator = numpy.sum(
+                rating_sim_matrix[user_index][index_most_similar_users])
+            numerator = rating_sim_matrix[user_index][index_most_similar_users].dot(
+                rating_matrix[:, movie][index_most_similar_users])
+            pred_matrix[movie] = numerator / denominator
+
+    # unrated movies of this user but hightly rated by most similar users
+    # actual movie id = movie index + 1
+    movie_ids = [movie_list[i] for i in numpy.argsort(pred_matrix)[-n:]]
+    return movie_ids
 
 
-
-
-
-
-
-
-
-
-
-
-
-
+if __name__ == '__main__':
+    main()
