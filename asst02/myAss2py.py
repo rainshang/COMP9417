@@ -22,7 +22,8 @@ def main():
 
     ratings = parse_data(rating_data_path)
     rating_matrix_sparsity = generate_rating_matrix(ratings)
-    # evaluation(rating_matrix_sparsity)
+    if DEBUG:
+        evaluation(rating_matrix_sparsity)
 
     global rating_sim_matrix
     rating_sim_matrix = cos_similarity(rating_matrix)
