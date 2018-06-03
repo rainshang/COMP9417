@@ -3,7 +3,7 @@ import pandas
 import numpy
 import matplotlib.pyplot as pyplot
 
-DEBUG = True
+DEBUG = False
 
 global user_list
 global user_id_index_map
@@ -32,9 +32,13 @@ def main():
     movies = parse_data(movie_data_path)
 
     print('=================================================================================\n'
-          'Welecome to Group ?????\'s Collaborative Filtering based Movie Recommation System.\n\n'
+          'Welecome to Group BIG BUN\'s Collaborative Filtering based Movie Recommation System.\n'
+          '                                             by Ang Li\n'
+          '                                                Ethan Xu\n'
+          '                                                Ge Huang\n'
+          '                                                Zhizheng Shi\n\n'
           '  1.Input the ID of user to get recommandaton.\n'
-          '  2.Input \'q\' or other to exit.\n\n'
+          '  2.Input \'q\' or other non-integer to exit.\n\n'
           '=================================================================================')
 
     while True:
