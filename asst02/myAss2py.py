@@ -10,6 +10,7 @@ global user_id_index_map
 global movie_list
 global rating_matrix
 global rating_sim_matrix
+global movies
 
 
 def main():
@@ -27,20 +28,28 @@ def main():
 
     global rating_sim_matrix
     rating_sim_matrix = cos_similarity(rating_matrix)
+    global movies
     movies = parse_data(movie_data_path)
 
-    while True:
-        uid = input(
-            'Please input the user ID, we\'ll recommend some movies this user may like:')
-        movie_ids = recommend_movies(5, 50, int(uid))
-        if DEBUG:
-            print('Recommendation are:{}'.format(movie_ids))
+    print('=================================================================================\n'
+          'Welecome to Group ?????\'s Collaborative Filtering based Movie Recommation System.\n\n'
+          '  1.Input the ID of user to get recommandaton.\n'
+          '  2.Input \'q\' or other to exit.\n\n'
+          '=================================================================================')
 
-        columns = movies.columns
-        result = []
-        for i in movie_ids:
-            result.append(movie_list[i])
-        print(movies.loc[movies[columns[0]].isin(result)][columns[1]])
+    while True:
+        inputs = input('Please input the user ID:')
+        try:
+            uid = int(inputs)
+            if uid in user_list:
+                movie_ids = recommend_movies(5, 50, uid)
+                print(
+                    '\nAccording to these users\'s preference, we recommand you 5 movies:\n')
+                print('{}\n'.format(movies.loc[movies[movies.columns[0]].isin(movie_ids)]))
+            else:
+                print('Opps, user-{} seems not existing...'.format(uid))
+        except ValueError:
+            exit(0)
 
 
 def parse_data(path):
@@ -121,8 +130,12 @@ def evaluation(rating_matrix_sparsity):
         test_data[user_index, movie_index] = rating_matrix[user_index, movie_index]
         train_data[user_index, movie_index] = 0.
     if DEBUG:
-        print('Training data set is:{}'.format(train_data))
-        print('Testing data set is:{}'.format(test_data))
+        pyplot.title('Distribution of training data')
+        pyplot.imshow(train_data, interpolation='nearest', aspect='auto')
+        pyplot.show()
+        pyplot.title('Distribution of testing data')
+        pyplot.imshow(test_data, interpolation='nearest', aspect='auto')
+        pyplot.show()
 
     # calculate cosine-similarity
     train_sim_matrix = cos_similarity(train_data)
@@ -185,8 +198,14 @@ def MSE(pred, true):
 def recommend_movies(n, k, uid):
     user_index = user_id_index_map[uid]
     # indexes of (num_other_user) most similar users
-    index_most_similar_users = [numpy.argsort(
-        rating_sim_matrix[:, user_index])[-2:-k-2:-1]]
+    index_most_similar_users = numpy.argsort(
+        rating_sim_matrix[:, user_index])[-2:-k-2:-1]
+    print('We\'ve found {} users whose tastes are most similar with you'.format(
+        len(index_most_similar_users)))
+    if DEBUG:
+        print(movies.loc[movies[movies.columns[0]].isin(
+            [movie_list[i] for i in index_most_similar_users]
+        )])
 
     num_of_movies = rating_matrix.shape[1]
     # empty prediction matrix:
