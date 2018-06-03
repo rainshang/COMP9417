@@ -33,10 +33,10 @@ def main():
 
     print('=================================================================================\n'
           'Welecome to Group BIG BUN\'s Collaborative Filtering based Movie Recommation System.\n'
-          '                                             by Ang Li\n'
-          '                                                Ethan Xu\n'
-          '                                                Ge Huang\n'
-          '                                                Zhizheng Shi\n\n'
+          '                                         by Ang Li\n'
+          '                                            Ethan Xu\n'
+          '                                            Ge Huang\n'
+          '                                            Zhizheng Shi\n\n'
           '  1.Input the ID of user to get recommandaton.\n'
           '  2.Input \'q\' or other non-integer to exit.\n\n'
           '=================================================================================')
@@ -49,7 +49,8 @@ def main():
                 movie_ids = recommend_movies(5, 50, uid)
                 print(
                     '\nAccording to these users\'s preference, we recommand you 5 movies:\n')
-                print('{}\n'.format(movies.loc[movies[movies.columns[0]].isin(movie_ids)]))
+                print('{}\n'.format(
+                    movies.loc[movies[movies.columns[0]].isin(movie_ids)]))
             else:
                 print('Opps, user-{} seems not existing...'.format(uid))
         except ValueError:
@@ -87,9 +88,6 @@ def generate_rating_matrix(ratings):
     # sort the id, this step is not necessary
     user_list = sorted(user_set)
     movie_list = sorted(movie_set)
-    if DEBUG:
-        print('Sort users by id: {}'.format(user_list))
-        print('Sort movies by id: {}'.format(movie_list))
 
     # create a hash map for searching the position in user_list(movie_list) of one user_id(movie_id)
     user_id_index_map = {}
@@ -98,9 +96,6 @@ def generate_rating_matrix(ratings):
         user_id_index_map[user_list[i]] = i
     for i in range(item_num):
         movie_id_index_map[movie_list[i]] = i
-    if DEBUG:
-        print('id-index map of users: {}'.format(user_id_index_map))
-        print('id-index map of movies: {}'.format(movie_id_index_map))
 
     # create rating matrix
     rating_matrix = numpy.zeros((user_num, item_num))
@@ -121,9 +116,8 @@ def evaluation(rating_matrix_sparsity):
     # we select 10% of sparsity * item as testing data set for each user
     num_test_items_per_user = int(
         0.1 * rating_matrix_sparsity * rating_matrix.shape[1])
-    if DEBUG:
-        print('Select {} movies for testing per user'.format(
-            num_test_items_per_user))
+    print('Select {} movies for testing per user'.format(
+        num_test_items_per_user))
 
     train_data = rating_matrix.copy()
     test_data = numpy.zeros(rating_matrix.shape)
@@ -133,13 +127,6 @@ def evaluation(rating_matrix_sparsity):
             0], size=num_test_items_per_user, replace=False)
         test_data[user_index, movie_index] = rating_matrix[user_index, movie_index]
         train_data[user_index, movie_index] = 0.
-    if DEBUG:
-        pyplot.title('Distribution of training data')
-        pyplot.imshow(train_data, interpolation='nearest', aspect='auto')
-        pyplot.show()
-        pyplot.title('Distribution of testing data')
-        pyplot.imshow(test_data, interpolation='nearest', aspect='auto')
-        pyplot.show()
 
     # calculate cosine-similarity
     train_sim_matrix = cos_similarity(train_data)
@@ -190,8 +177,7 @@ def predict_based_on_users(k, user_sim_matrix, train_data, test_data):
     # mse of test data and predict data
     mse = MSE(prediction_matrix[non_zero_index].flatten(
     ), test_data[non_zero_index].flatten())
-    if DEBUG:
-        print('The mean squared error of {} user_based CF is: {}\n'.format(k, mse))
+    print('The mean squared error of {} user_based CF is: {}\n'.format(k, mse))
     return mse
 
 
@@ -206,10 +192,6 @@ def recommend_movies(n, k, uid):
         rating_sim_matrix[:, user_index])[-2:-k-2:-1]
     print('We\'ve found {} users whose tastes are most similar with you'.format(
         len(index_most_similar_users)))
-    if DEBUG:
-        print(movies.loc[movies[movies.columns[0]].isin(
-            [movie_list[i] for i in index_most_similar_users]
-        )])
 
     num_of_movies = rating_matrix.shape[1]
     # empty prediction matrix:
