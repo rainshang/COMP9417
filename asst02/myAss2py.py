@@ -82,8 +82,7 @@ def generate_rating_matrix(ratings):
     user_num = len(user_set)
     item_num = len(movie_set)
     if DEBUG:
-        print('{} users involved: {}'.format(user_num, user_set))
-        print('{} movies involved: {}'.format(item_num, movie_set))
+        print('{} users and {} movies involved'.format(user_num, item_num))
 
     # sort the id, this step is not necessary
     user_list = sorted(user_set)
