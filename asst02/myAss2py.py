@@ -3,7 +3,7 @@ import pandas
 import numpy
 import matplotlib.pyplot as pyplot
 
-DEBUG = False
+DEBUG = True
 
 global user_list
 global user_id_index_map
