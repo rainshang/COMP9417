@@ -1,0 +1,23 @@
+What should be in the package:
+|--ml-latest-small
+|  |--ratings.csv
+|  |--movies.csv
+|  |--...
+|--movie_recommender.py
+|--README
+
+We pack the 'MovieLens Latest Datasets' small from
+https://grouplens.org/datasets/movielens/ and the program will use
+the 'ratings.csv' and 'movies.csv' by default.
+
+'movie_recommender.py' is a Python3 script, the calling format is:
+
+Python3 movie_recommender.py [ratings_csv_path] [movies_csv_path]
+
+It is straightforward to get the recommendation as the guiding
+of information text printed out.
+
+Particularly, to evaluate our strategy and models, set 'DEBUG' in
+'movie_recommender.py'(line6) True to execute the evaluation function.
+It will display a MSE bar chart of the result between prediction
+of different k-Top training set and testing set.
