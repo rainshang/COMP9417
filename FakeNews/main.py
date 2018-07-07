@@ -1,8 +1,10 @@
-import numpy as np
 import pandas as pd
-from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer, TfidfVectorizer
-# from sklearn.metrics.pairwise import cosine_similarity
-from scipy import spatial
+from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer
+from sklearn.feature_extraction.stop_words import ENGLISH_STOP_WORDS
+from scipy.spatial.distance import cosine
+
+
+__MAX_FEATURES = 5000
 
 
 def main():
@@ -10,30 +12,42 @@ def main():
     bodies_train = pd.read_csv('data/train_bodies.csv', encoding='utf-8')
 
     # arrays of headline and body
-    headlines = [headline for headline in stances_train["Headline"].unique()]
-    bodies = [body for body in bodies_train["articleBody"].unique()]
+    headlines = [headline for headline in stances_train['Headline'].unique()]
+    bodies = [body for body in bodies_train['articleBody'].unique()]
 
-    # calculate term frequency
+    # calculate the BOW, TF and TF-IDF of training data
     vocabulary = headlines + bodies
-    count_vectorizer = CountVectorizer(max_features=5000, stop_words='english')
-    term_frequencies = count_vectorizer.fit_transform(vocabulary).toarray()
-    feature_names = count_vectorizer.get_feature_names()
+
+    bow_vectorizer = CountVectorizer(
+        max_features=__MAX_FEATURES, stop_words=ENGLISH_STOP_WORDS)
+    bow = bow_vectorizer.fit_transform(vocabulary)
+    feature_names = bow_vectorizer.get_feature_names()
+
+    tf = TfidfTransformer(use_idf=False).fit_transform(bow).toarray()
+    tf_idf = TfidfTransformer().fit_transform(bow).toarray()
 
     # 2 new tables:
-    # headline | vector     and     body | vector
-    headline_df = pd.DataFrame(headlines, columns=["Headline"])
-    body_df = pd.DataFrame(bodies, columns=["articleBody"])
+    # Headline | tf | tf_idf     and     articleBody | tf | tf_idf
+    headline_df = pd.DataFrame(headlines, columns=['Headline'])
+    body_df = pd.DataFrame(bodies, columns=['articleBody'])
 
-    headline_df["vector"] = pd.DataFrame(
-        term_frequencies[:len(headlines)], columns=feature_names).values.tolist()
-    body_df["vector"] = pd.DataFrame(
-        term_frequencies[len(headlines):len(vocabulary)], columns=feature_names).values.tolist()
+    headline_df['tf'] = pd.DataFrame(
+        tf[:len(headlines)], columns=feature_names).values.tolist()
+    headline_df['tf_idf'] = pd.DataFrame(
+        tf_idf[:len(headlines)], columns=feature_names).values.tolist()
 
+    body_df['tf'] = pd.DataFrame(
+        tf[len(headlines):len(vocabulary)], columns=feature_names).values.tolist()
+    body_df['tf_idf'] = pd.DataFrame(
+        tf_idf[len(headlines):len(vocabulary)], columns=feature_names).values.tolist()
+
+    # left join
     headline_df = stances_train.merge(headline_df, on='Headline')
     body_df = bodies_train.merge(body_df, on='articleBody')
 
+    # Headline | vector_headline | articlebody | vector_body | relatedness
     df = headline_df.merge(body_df, on='Body ID').rename(
-        columns={'vector_x': 'vector_headline', 'vector_y': 'vector_body'})
+        columns={'tf_x': 'tf_headline', 'tf_y': 'tf_body', 'tf_idf_x': 'tf_idf_headline', 'tf_idf_y': 'tf_idf_body'})
 
     df.apply(lambda row: 'unrelated' if row['Stance'] ==
              'unrelated' else 'related', axis=1).value_counts()
@@ -41,18 +55,16 @@ def main():
     df['relatedness'] = df.apply(
         lambda row: 1 if row['Stance'] != 'unrelated' else 0, axis=1)
 
-    df = df.drop(['Stance', 'Body ID'], axis=1)
-
     similarity = []
-    for i in range(49971):
-        # a = cosine_similarity([df["vector_headline"].loc[i]], [
-        #                       df["vector_body"].loc[i]])[0][0]
-        b = 1 - \
-            spatial.distance.cosine(
-                df["vector_headline"].loc[i], df["vector_body"].loc[i])
-        similarity.append(b)
+    for entry in df.itertuples(index=False):
+        # cosine similarity of tf_idf_headline and tf_idf_body
+        similarity.append(1 - cosine(entry[4], entry[7]))
 
-    df["similarity"] = pd.Series(similarity)
+    df['tf_idf_cos_sim'] = pd.Series(similarity)
+
+    df = df[['tf_headline', 'tf_body', 'tf_idf_cos_sim', 'relatedness']]
+
+    print(df)
 
 
 if __name__ == '__main__':
