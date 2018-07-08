@@ -49,8 +49,8 @@ def main():
     df = headline_df.merge(body_df, on='Body ID').rename(
         columns={'tf_x': 'tf_headline', 'tf_y': 'tf_body', 'tf_idf_x': 'tf_idf_headline', 'tf_idf_y': 'tf_idf_body'})
 
-    df.apply(lambda row: 'unrelated' if row['Stance'] ==
-             'unrelated' else 'related', axis=1).value_counts()
+    # df.apply(lambda row: 'unrelated' if row['Stance'] ==
+    #          'unrelated' else 'related', axis=1).value_counts()
 
     df['relatedness'] = df.apply(
         lambda row: 1 if row['Stance'] != 'unrelated' else 0, axis=1)
@@ -58,11 +58,23 @@ def main():
     similarity = []
     for entry in df.itertuples(index=False):
         # cosine similarity of tf_idf_headline and tf_idf_body
-        similarity.append(1 - cosine(entry[4], entry[7]))
+        if sum(entry[4]) == 0 or sum(entry[7]) == 0:
+            similarity.append(0)
+        else:
+            similarity.append(1 - cosine(entry[4], entry[7]))
 
     df['tf_idf_cos_sim'] = pd.Series(similarity)
 
     df = df[['tf_headline', 'tf_body', 'tf_idf_cos_sim', 'relatedness']]
+
+    # flat the TF to features, df will be like
+    # tf_headline | tf_body | tf_idf_cos_sim | relatedness | tf_headline in feature_names | tf_body in feature_names
+    tf_headline = pd.DataFrame(
+        df['tf_headline'].tolist(), columns=feature_names)
+    tf_body = pd.DataFrame(df['tf_body'].tolist(), columns=feature_names)
+
+    df = pd.concat([df, tf_headline], axis=1)
+    df = pd.concat([df, tf_body], axis=1)
 
     print(df)
 
